@@ -8,7 +8,7 @@ async function run (): Promise<void> {
     // Retrieve authenticated container client
     const containerClient = getBlobServiceClient(inputs.account).getContainerClient(inputs.destination)
     // Upload files to container
-    const output: Output[] = await uploadBlobs(containerClient, inputs.source)
+    const output: Output[] = await uploadBlobs(containerClient, inputs.source_folder, inputs.source_pattern)
 
     core.setOutput('urls', JSON.stringify(output))
   } catch (error) {

@@ -8,7 +8,8 @@ import g from 'glob'
 export interface Inputs {
   account: string
   destination: string
-  source: string
+  sourcefolder: string
+  sourcepattern: string
 }
 
 export interface Output {
@@ -20,7 +21,8 @@ export const getInputs = (): Inputs => {
   const inputs = {
     account: core.getInput('account', { required: true }),
     destination: core.getInput('destination', { required: true }),
-    source: core.getInput('source', { required: true })
+    source_folder: core.getInput('source_folder', { required: true }),
+    souce_pattern: core.getInput('source_pattern', { required: true })
   }
   core.debug(`Received inputs: ${JSON.stringify(inputs)}`)
 
@@ -44,7 +46,7 @@ export const getBlobServiceClient = (account: string): BlobServiceClient => {
 }
 
 // Upload `filename` to Azure Blob Storage using authenticated `client`
-export const uploadBlob = async (client: ContainerClient, filename: string): Promise<Output> => {
+export const uploadBlob = async (client: ContainerClient, folder: string, filename: string): Promise<Output> => {
   core.debug(`Reading file ${filename}`)
 
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -52,7 +54,7 @@ export const uploadBlob = async (client: ContainerClient, filename: string): Pro
     return {}
   }
 
-  const file = await fsPromises.readFile(filename, 'utf-8')
+  const file = await fsPromises.readFile(folder+'/'+filename, 'utf-8')
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   let output: Output = {} as Output
 
@@ -78,17 +80,18 @@ export const uploadBlob = async (client: ContainerClient, filename: string): Pro
 }
 
 // Upload files defined by `pattern` to Azure Blob Storage using authenticated `client`
-export const uploadBlobs = async (client: ContainerClient, pattern: string): Promise<Output[]> => {
+export const uploadBlobs = async (client: ContainerClient, folder: string, pattern: string): Promise<Output[]> => {
   core.debug(`Getting files: ${pattern}...`)
 
   const glob = promisify(g)
-  const filenames = await glob(pattern)
+  path = Path(folder)
+  const filenames = await path.glob(pattern)
 
   core.debug(`filenames: ${JSON.stringify(filenames)}`)
   if (filenames.length === 0) {
     core.warning(`No files found for input source = ${pattern}`)
   }
-  const outputs: Output[] = await Promise.all(filenames.map(async (filename) => await uploadBlob(client, filename)))
+  const outputs: Output[] = await Promise.all(filenames.map(async (filename) => await uploadBlob(client, folder, filename)))
 
   return outputs
 }
